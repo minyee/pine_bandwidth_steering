@@ -36,6 +36,7 @@ void rounding_solution(std::vector<std::vector<double_t>>& qp_solution,
 
 void bandwidth_steering(std::string filename, 
 						std::vector<std::vector<double_t>>& traffix_matrix, 
-						double_t link_per_group);
-
+						double_t link_per_group,
+						double_t threshold);
+int main(int argc, char** argv);
 }

@@ -32,4 +32,18 @@ void matrix_vector_multiply(std::vector< std::vector<int_t> >& matrix,
 	}
 };
 
+void square_matrix_sum(int_t size, 
+						std::vector<std::vector<double_t>>& mat1,
+						std::vector<std::vector<double_t>>& mat2,
+						std::vector<std::vector<double_t>>& soln) {
+	soln.resize(size);
+	for (int_t i = 0; i < size; i++) {
+		soln[i].resize(size);
+		for (int_t j = 0; j < size; j++) {
+			soln[i][j] = mat1[i][j] + mat2[i][j];
+		}
+	}
+	return;
+};
+
 }
