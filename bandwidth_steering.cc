@@ -54,13 +54,14 @@ bool read_etm(std::string filename,
  * For example, if normalize_to = 3, then the sum of each row will equal 3
  **/
 void row_normalize_matrix(std::vector<std::vector<double_t>>& matrix, double_t normalize_to) {
-	for (auto row : matrix) {
+	int_t size = matrix.size();
+	for (int_t i = 0; i < size; i++) {
 		double_t row_sum = 0;
-		for (auto entry : row) {
-			row_sum += entry;
+		for (int_t j = 0; j < size; j++) {
+			row_sum += matrix[i][j];
 		}
-		for (auto entry : row) {
-			entry = entry / row_sum;
+		for (int_t j = 0; j < size; j++) {
+			matrix[i][j] = (matrix[i][j] / row_sum) * normalize_to;
 		}
 	}
 	return;
@@ -149,7 +150,6 @@ void configure_constraints_rows(int_t matrix_size,
 		C_str += "0], ";
 		d_str += "-1, ";
 	}
-	//std::cout << C_str << std::endl;
 };
 
 /**
@@ -250,7 +250,7 @@ void configure_constraints(int_t matrix_size,
 	configure_constraints_cols(matrix_size, link_per_group, C_str, d_str, opt_params, traffic_matrix);
 	C_str += "]";
 	d_str += "]";
-	std::cout << C_str << std::endl;
+	//std::cout << C_str << std::endl;
 	return;
 };
 
@@ -363,7 +363,7 @@ void bandwidth_steering(std::string filename,
 						std::vector<std::vector<double_t>>& traffix_matrix, 
 						double_t link_per_group, 
 						double_t threshold) {
-	std::cout << "cp1" << std::endl;
+	
 	std::vector<std::vector<double_t>> traffic_matrix;
 	int_t matrix_size;
 	if (!read_etm(filename, traffic_matrix, matrix_size)) {
@@ -373,11 +373,10 @@ void bandwidth_steering(std::string filename,
 	if (link_per_group < 0) {
 		link_per_group = (double_t) matrix_size - 1;
 	}
-
 	// Step 0: gotta do some preprocessing by row normalizing each row
 	row_normalize_matrix(traffic_matrix, link_per_group);
-	print_matrix(traffic_matrix);
-	std::cout << "cp2" << std::endl;
+	//print_matrix(traffic_matrix);
+	
 	// if we are here, that means that the traffic matrix has been read in
 	optimization_parameters opt_params;
 	std::string A_str;
@@ -387,28 +386,28 @@ void bandwidth_steering(std::string filename,
 
 	// Step 1: configure the constraints and objective
 	configure_objective_function(matrix_size, A_str, b_str, &opt_params);
-	std::cout << "cp3" << std::endl;
-	std::cout << A_str << std::endl;
-	std::cout << b_str << std::endl;
+	
+	//std::cout << A_str << std::endl;
+	//std::cout << b_str << std::endl;
 	configure_constraints(matrix_size, link_per_group, C_str, d_str, &opt_params, traffic_matrix);
 	//std::cout << C_str << std::endl;
-	std::cout << d_str << std::endl;
+	//std::cout << d_str << std::endl;
 	opt_params.A = alglib::real_2d_array(A_str.c_str());
 	opt_params.b = alglib::real_1d_array(b_str.c_str());
 	opt_params.C = alglib::real_2d_array(C_str.c_str());
 	opt_params.ct = alglib::integer_1d_array(d_str.c_str());
-	std::cout << "cp4" << std::endl;
+	
 	// Step 2: begin the quadratic program
 	std::vector<std::vector<double_t>> solution;
 	if (!begin_optimization(matrix_size, &opt_params, solution)) {
 		std::cerr << "Solution did not converge" << std::endl;
 		std::exit(-1);
 	}
-	std::cout << "cp5" << std::endl;
+	
 	// Step 3: translate the results into bandwidth matrix
 	std::vector<std::vector<double_t>> actual_solution;
 	translate_results(matrix_size, solution, traffic_matrix, actual_solution);
-	std::cout << "cp6" << std::endl;
+	
 	std::vector<std::vector<int_t>> final_integer_soln;
 	rounding_solution(matrix_size, 
 						actual_solution, 
@@ -416,6 +415,13 @@ void bandwidth_steering(std::string filename,
 						final_integer_soln,
 						threshold, 
 						(int_t) link_per_group);
+	std::cout << "Printing final matrix" << std::endl;
+	for (int_t i = 0; i < matrix_size; i++) {
+		for (int_t j = 0; j < matrix_size; j++) {
+			std::cout << std::to_string(final_integer_soln[i][j]) << " ";
+		}
+		std::cout << std::endl;
+	}
 	return;
 };
 }
