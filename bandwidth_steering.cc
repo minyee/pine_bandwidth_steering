@@ -310,7 +310,8 @@ void rounding_solution(int_t matrix_size,
 			if (row_links_left[row] < 0) {
 				for (int_t col = 0; col < matrix_size; col++) {
 					if (actual_solution_integer[row][col] <= 1 || 
-							col_links_left[col] >= 0)
+							col_links_left[col] >= 0 || 
+							col == row)
 						continue; // skip over entries with very few links
 									// also skip over column entries which are already occupied fully or underoccupied
 					if (curr_min > pow((double_t) actual_solution_integer[row][col] - traffic_matrix[row][col], 2)) {
