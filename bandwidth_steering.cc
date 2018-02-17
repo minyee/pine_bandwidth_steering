@@ -60,6 +60,9 @@ void row_normalize_matrix(std::vector<std::vector<double_t>>& matrix, double_t n
 		for (int_t j = 0; j < size; j++) {
 			row_sum += matrix[i][j];
 		}
+		if (row_sum == 0) {
+			return;
+		}
 		for (int_t j = 0; j < size; j++) {
 			matrix[i][j] = (matrix[i][j] / row_sum) * normalize_to;
 		}
@@ -265,7 +268,27 @@ void translate_results(int_t matrix_size,
 	actual_solution.resize(matrix_size);
 	matrix_op::square_matrix_sum(matrix_size, solution, traffic_matrix, actual_solution);
 	return;
-}
+};
+
+void print_matrix(std::vector<std::vector<double_t>>& mat) {
+	int_t size = mat.size();
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			std::cout << std::to_string(mat[i][j]) << " ";
+		}
+		std::cout << std::endl;
+	}
+};
+
+void print_matrix(std::vector<std::vector<int_t>>& mat) {
+	int_t size = mat.size();
+	for (int i = 0; i < size; i++) {
+		for (int j = 0; j < size; j++) {
+			std::cout << std::to_string(mat[i][j]) << " ";
+		}
+		std::cout << std::endl;
+	}
+};
 
 /**
  * Called during the final stages of the algorithm to run down results
@@ -283,14 +306,19 @@ void rounding_solution(int_t matrix_size,
 	for (int_t i = 0; i < matrix_size; i++) {
 		actual_solution_integer[i].resize(matrix_size);
 		for (int_t j = 0; j < matrix_size; j++) {
-			actual_solution_integer[i][j] = (int_t) traffic_matrix[i][j];
+			actual_solution_integer[i][j] = (int_t) actual_solution[i][j];
 			actual_solution_integer[i][j] = 
-				(traffic_matrix[i][j] >= threshold) ? std::max((int_t) actual_solution[i][j], (int_t) 1) : 0;
+				(traffic_matrix[i][j] >= threshold * link_per_group) ? std::max((int_t) actual_solution[i][j], (int_t) 1) : 0;
 		}
 	}
 	std::vector<int_t> row_links_left(matrix_size);
 	std::vector<int_t> col_links_left(matrix_size);
-
+	std::cout << "printing traffic matrix" << std::endl;
+	print_matrix(traffic_matrix);
+	std::cout << "printing actual_solution" << std::endl;
+	print_matrix(actual_solution);
+	std::cout << "printing actual_solution_integer" << std::endl;
+	print_matrix(actual_solution_integer);
 	// Step 2: Now scan across to reround actual_solution_integer
 	for (int_t i = 0; i < matrix_size; i++) {
 		int_t col_sum = 0;
@@ -305,11 +333,11 @@ void rounding_solution(int_t matrix_size,
 	for (int_t row = 0; row < matrix_size; row++) {
 		while (row_links_left[row] != 0) {
 			double_t curr_min = 10000;
-			int_t col_entry = 0;
+			int_t col_entry = -1;
 			// NOTE: in this case we want to take out links from the row, so find columns that are over occupied
 			if (row_links_left[row] < 0) {
 				for (int_t col = 0; col < matrix_size; col++) {
-					if (actual_solution_integer[row][col] <= 1 || 
+					if (//actual_solution_integer[row][col] <= 1 || 
 							col_links_left[col] >= 0 || 
 							col == row)
 						continue; // skip over entries with very few links
@@ -319,6 +347,9 @@ void rounding_solution(int_t matrix_size,
 						curr_min = pow((double_t) actual_solution_integer[row][col] - traffic_matrix[row][col], 2);
 					}
 				}
+				if (col_entry < 0) {
+					break;
+				}
 				actual_solution_integer[row][col_entry]--;
 				col_links_left[col_entry]++;
 				row_links_left[row]++;
@@ -326,14 +357,18 @@ void rounding_solution(int_t matrix_size,
 			// NOTE: in this case we want to put in links into the row, so find columns that are under occupied
 			else {
 				for (int_t col = 0; col < matrix_size; col++) {
-					if (actual_solution_integer[row][col] <= 1 || 
-							col_links_left[col] <= 0)
+					if (//actual_solution_integer[row][col] <= 1 || 
+							col_links_left[col] <= 0 ||
+							col == row)
 						continue; // skip over entries with very few links
 									// also skip over column entries which are already occupied fully or overoccupied
 					if (curr_min > pow((double_t) actual_solution_integer[row][col] - traffic_matrix[row][col], 2)) {
 						col_entry = col;
 						curr_min = pow((double_t) actual_solution_integer[row][col] - traffic_matrix[row][col], 2);
 					}
+				}
+				if (col_entry < 0) {
+					break;
 				}
 				actual_solution_integer[row][col_entry]++;
 				col_links_left[col_entry]--;
@@ -343,15 +378,7 @@ void rounding_solution(int_t matrix_size,
 	}
 }
 
-void print_matrix(std::vector<std::vector<double_t>>& mat) {
-	int_t size = mat.size();
-	for (int i = 0; i < size; i++) {
-		for (int j = 0; j < size; j++) {
-			std::cout << std::to_string(mat[i][j]) << " ";
-		}
-		std::cout << std::endl;
-	}
-}
+
 
 /**
  * The main bandwidth steering algorithm.
@@ -408,11 +435,13 @@ void bandwidth_steering(std::string filename,
 	// Step 3: translate the results into bandwidth matrix
 	std::vector<std::vector<double_t>> actual_solution;
 	translate_results(matrix_size, solution, traffic_matrix, actual_solution);
-	
+	std::cout << "pumoi" << std::endl;
+	print_matrix(actual_solution);
 	std::vector<std::vector<int_t>> final_integer_soln;
 	rounding_solution(matrix_size, 
-						actual_solution, 
 						traffic_matrix, 
+						actual_solution, 
+						
 						final_integer_soln,
 						threshold, 
 						(int_t) link_per_group);
