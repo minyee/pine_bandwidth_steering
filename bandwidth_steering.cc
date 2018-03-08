@@ -337,7 +337,7 @@ void rounding_solution(int_t matrix_size,
 			// NOTE: in this case we want to take out links from the row, so find columns that are over occupied
 			if (row_links_left[row] < 0) {
 				for (int_t col = 0; col < matrix_size; col++) {
-					if (//actual_solution_integer[row][col] <= 1 || 
+					if (actual_solution_integer[row][col] <= 1 || 
 							col_links_left[col] >= 0 || 
 							col == row)
 						continue; // skip over entries with very few links
@@ -357,7 +357,7 @@ void rounding_solution(int_t matrix_size,
 			// NOTE: in this case we want to put in links into the row, so find columns that are under occupied
 			else {
 				for (int_t col = 0; col < matrix_size; col++) {
-					if (//actual_solution_integer[row][col] <= 1 || 
+					if (actual_solution_integer[row][col] <= 1 || 
 							col_links_left[col] <= 0 ||
 							col == row)
 						continue; // skip over entries with very few links
@@ -379,6 +379,23 @@ void rounding_solution(int_t matrix_size,
 }
 
 
+void write_solution_to_file(std::string output_filename, std::vector<std::vector<int_t>>& solution) {
+	std::ofstream ofile;
+	ofile.open(output_filename);
+	int_t mat_size = solution.size();
+	ofile << (std::to_string(mat_size) + "\n");
+	for (int i = 0; i < mat_size; i++) {
+		for (int j = 0; j < mat_size; j++) {
+			if (j == mat_size - 1) {
+				ofile << (std::to_string(solution[i][j]) + "\n");	
+			} else {
+				ofile << (std::to_string(solution[i][j]) + " ");
+			}
+		}
+	}
+	ofile.close();
+}
+
 
 /**
  * The main bandwidth steering algorithm.
@@ -390,7 +407,9 @@ void rounding_solution(int_t matrix_size,
 void bandwidth_steering(std::string filename, 
 						std::vector<std::vector<double_t>>& traffix_matrix, 
 						double_t link_per_group, 
-						double_t threshold) {
+						double_t threshold,
+						bool write_to_file,
+						std::string output_filename) {
 	
 	std::vector<std::vector<double_t>> traffic_matrix;
 	int_t matrix_size;
@@ -398,7 +417,7 @@ void bandwidth_steering(std::string filename,
 		std::cerr << "file cannot be opened" << std::endl;
 		std::exit(-1);
 	}
-	if (link_per_group < 0) {
+	if (link_per_group <= 0) {
 		link_per_group = (double_t) matrix_size - 1;
 	}
 	// Step 0: gotta do some preprocessing by row normalizing each row
@@ -435,7 +454,6 @@ void bandwidth_steering(std::string filename,
 	// Step 3: translate the results into bandwidth matrix
 	std::vector<std::vector<double_t>> actual_solution;
 	translate_results(matrix_size, solution, traffic_matrix, actual_solution);
-	std::cout << "pumoi" << std::endl;
 	print_matrix(actual_solution);
 	std::vector<std::vector<int_t>> final_integer_soln;
 	rounding_solution(matrix_size, 
@@ -445,12 +463,17 @@ void bandwidth_steering(std::string filename,
 						final_integer_soln,
 						threshold, 
 						(int_t) link_per_group);
-	std::cout << "Printing final matrix" << std::endl;
-	for (int_t i = 0; i < matrix_size; i++) {
-		for (int_t j = 0; j < matrix_size; j++) {
-			std::cout << std::to_string(final_integer_soln[i][j]) << " ";
+	
+	if (!write_to_file) {
+		std::cout << "Printing final matrix" << std::endl;
+		for (int_t i = 0; i < matrix_size; i++) {
+			for (int_t j = 0; j < matrix_size; j++) {
+				std::cout << std::to_string(final_integer_soln[i][j]) << " ";
+			}
+			std::cout << std::endl;
 		}
-		std::cout << std::endl;
+	} else {
+		write_solution_to_file(output_filename, final_integer_soln);
 	}
 	return;
 };
@@ -459,7 +482,7 @@ void bandwidth_steering(std::string filename,
 using namespace std;
 
 int main(int argc, char** argv) {
-	int default_mode;
+	int default_mode; // what is default mode 
 	if (argc > 2) {
 		default_mode = 1; 
 	} else {
@@ -474,8 +497,13 @@ int main(int argc, char** argv) {
 	} else {
 		link_per_group = std::stoi(argv[2]);
 	}
-
-	bandwidth_steering::bandwidth_steering(filename, traffic_matrix, link_per_group, threshold);
+	std::string output_filename = "";
+	bool write_to_file = false;
+	if (argc >= 4) {
+		write_to_file = true;
+		output_filename += argv[3];
+	}
+	bandwidth_steering::bandwidth_steering(filename, traffic_matrix, link_per_group, threshold, write_to_file, output_filename);
 	std::cout << "Exited Cleanly" << std::endl;
 	return 0;
 };
