@@ -1,5 +1,5 @@
 TARGET := bsteer
-SRC := optimization.cpp ap.cpp alglibinternal.cpp alglibmisc.cpp linalg.cpp solvers.cpp bandwidth_steering.cc
+SRC := optimization.cpp ap.cpp alglibinternal.cpp alglibmisc.cpp linalg.cpp solvers.cpp bandwidth_steering.cc network_topology.cc
 
 CXX :=    g++
 CC :=     gcc

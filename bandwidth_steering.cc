@@ -4,6 +4,7 @@
 #include <fstream>
 #include <optimization.h>
 #include <algorithm>
+#include "network_topology.h"
 namespace bandwidth_steering {
 
 /**
